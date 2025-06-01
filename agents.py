@@ -15,6 +15,7 @@ from llama_index.core import (
 )
 from llama_index.core.embeddings import resolve_embed_model
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from llama_index.llms.ollama import Ollama
 
 # Настройка логгирования
 logging.basicConfig(level=logging.INFO)
@@ -23,11 +24,14 @@ logger = logging.getLogger(__name__)
 # Загрузка .env
 load_dotenv()
 
-# Инициализация LLM с использованием Groq
-llm = Groq(
-    model="llama3-70b-8192",
-    api_key=os.getenv("GROQ_API_KEY"),
-)
+# # Инициализация LLM с использованием Groq
+# llm = Groq(
+#     model="llama3-70b-8192",
+#     api_key=os.getenv("GROQ_API_KEY"),
+# )
+
+# Использование локальной ллм
+llm = Ollama(model="PetrosStav/gemma3-tools:4b", request_timeout=180.0)
 
 # Поисковый инструмент
 def search_tool(query: str) -> str:
