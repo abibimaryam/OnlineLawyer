@@ -57,9 +57,13 @@ ctx = Context(interviewer)
 def init_query_engine():
     persist_dir = "./vector_index"
 
-    # Устанавливаем локальную модель эмбеддингов
-    Settings.embed_model = HuggingFaceEmbedding(model_name="sberbank-ai/sbert_large_mt_nlu_ru")
-
+    # # Устанавливаем локальную модель эмбеддингов
+    # Settings.embed_model = HuggingFaceEmbedding(model_name="sberbank-ai/sbert_large_mt_nlu_ru")
+    Settings.embed_model = HuggingFaceEmbedding(
+    model_name="sberbank-ai/sbert_large_mt_nlu_ru",
+    device="cpu"
+    )
+    
     if os.path.exists(persist_dir):
         logger.info("Загружаем существующий индекс...")
         storage_context = StorageContext.from_defaults(persist_dir=persist_dir)
