@@ -16,6 +16,8 @@ from llama_index.core import (
 from llama_index.core.embeddings import resolve_embed_model
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.llms.ollama import Ollama
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.core import Settings
 
 # Настройка логгирования
 logging.basicConfig(level=logging.INFO)
@@ -24,14 +26,14 @@ logger = logging.getLogger(__name__)
 # Загрузка .env
 load_dotenv()
 
-# # Инициализация LLM с использованием Groq
-# llm = Groq(
-#     model="llama3-70b-8192",
-#     api_key=os.getenv("GROQ_API_KEY"),
-# )
+# Инициализация LLM с использованием Groq
+llm = Groq(
+    model="llama3-70b-8192",
+    api_key=os.getenv("GROQ_API_KEY"),
+)
 
 # Использование локальной ллм
-llm = Ollama(model="PetrosStav/gemma3-tools:4b", request_timeout=180.0)
+# llm = Ollama(model="PetrosStav/gemma3-tools:4b", request_timeout=180.0)
 
 # Поисковый инструмент
 def search_tool(query: str) -> str:
@@ -55,6 +57,9 @@ ctx = Context(interviewer)
 def init_query_engine():
     persist_dir = "./vector_index"
 
+    # Устанавливаем локальную модель эмбеддингов
+    Settings.embed_model = HuggingFaceEmbedding(model_name="sberbank-ai/sbert_large_mt_nlu_ru")
+
     if os.path.exists(persist_dir):
         logger.info("Загружаем существующий индекс...")
         storage_context = StorageContext.from_defaults(persist_dir=persist_dir)
@@ -65,8 +70,7 @@ def init_query_engine():
         file_extractor = {".pdf": parser}
         documents = SimpleDirectoryReader("./data", file_extractor=file_extractor).load_data()
 
-        embed_model = resolve_embed_model("local:BAAI/bge-m3")
-        vector_index = VectorStoreIndex.from_documents(documents, embed_model=embed_model)
+        vector_index = VectorStoreIndex.from_documents(documents, embed_model=Settings.embed_model)
         vector_index.storage_context.persist(persist_dir=persist_dir)
 
     return vector_index.as_query_engine(llm=llm)
@@ -126,7 +130,8 @@ async def pass_a_verdict(summarize_conv):
         system_prompt=(
             "Ты — юридический ИИ-агент. У тебя есть доступ к базе правовых документов (Конституция, кодексы и т.д.) "
             "Республики Узбекистан. Используй эти документы, чтобы выносить юридически обоснованный вердикт по входящему вопросу. "
-            "Твой ответ должен быть кратким, чётким и ссылаться на релевантные статьи при необходимости."
+            "Твой ответ должен быть кратким, чётким и ссылаться на релевантные статьи при необходимости." 
+            "Всегда отвечай на русском языке. Используй только правовой стиль из Узбекистана."
         ),
     )
 
@@ -135,29 +140,43 @@ async def pass_a_verdict(summarize_conv):
     return str(verdict)
 
 # Оценка рисков
-async def risk_estimate(summarize_conv, verdict):
+async def risk_estimate_and_forecast(summarize_conv, verdict):
+    query_engine = init_query_engine()
+    query_engine_tool = QueryEngineTool(
+        query_engine=query_engine,
+        metadata=ToolMetadata(
+            name="legal_documents_search",
+            description="Поиск и извлечение информации из Конституции, кодексов и других правовых документов Узбекистана."
+        ),
+    )
     estimater = AgentWorkflow.from_tools_or_functions(
-        tools_or_functions=[search_tool],
+        tools_or_functions=[search_tool,query_engine],
         llm=llm,
         system_prompt=(
             "Ты — юридический аналитик, специализирующийся на оценке правовых и репутационных рисков. "
-            "На основе краткой выжимки диалога и юридического вердикта ты должен проанализировать ситуацию и определить:\n"
-            "- потенциальные юридические, регуляторные и деловые риски,\n"
-            "- вероятность наступления последствий,\n"
-            "- степень серьёзности риска (низкий, средний, высокий).\n"
-            "Если риски отсутствуют — сообщи об этом обоснованно."
+            "На основе краткой выжимки диалога и юридического вердикта ты должен:\n"
+            "- проанализировать ситуацию и определить потенциальные юридические, регуляторные и деловые риски,\n"
+            "- оценить вероятность наступления последствий,\n"
+            "- определить степень серьёзности риска (низкий, средний, высокий),\n"
+            "- а также сделать прогноз дальнейшего развития ситуации с обоснованием.\n"
+            "Если риски отсутствуют — сообщи об этом обоснованно.\n"
+            "Всегда отвечай на русском языке, структурированно, с четкими пунктами."
         ),
     )
 
     prompt = (
-        f"На основе следующей информации оцени возможные риски:\n\n"
+        f"На основе следующей информации оцени возможные риски и сделай прогноз дальнейшего развития:\n\n"
         f"Краткая выжимка диалога:\n{summarize_conv}\n\n"
         f"Юридический вердикт:\n{verdict}\n\n"
-        "Выведи список рисков с пояснениями."
+        "Выведи список рисков с пояснениями и прогноз ситуации."
     )
 
-    risks = await estimater.run(prompt)
-    return str(risks)
+    try:
+        result = await estimater.run(prompt)
+    except Exception as e:
+        result = f"Ошибка при оценке рисков и прогнозе: {e}"
+
+    return str(result)
 
 # Главная функция
 async def main():
@@ -168,7 +187,7 @@ async def main():
     verdict = await pass_a_verdict(summarize_conv=summarize_conv)
     print("\nЮридический вердикт:\n", verdict)
 
-    risks = await risk_estimate(summarize_conv=summarize_conv, verdict=verdict)
+    risks = await risk_estimate_and_forecast(summarize_conv=summarize_conv, verdict=verdict)
     print("\nОценка рисков:\n", risks)
 
     # Сохраняем результаты в файл (опционально)
