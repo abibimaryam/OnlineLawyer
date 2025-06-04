@@ -110,7 +110,11 @@ async def analyze(conv):
     )
 
     prompt = f"Проанализируй следующую историю переписки и сделай краткое содержание:\n\n{conv}"
-    summarize_conv = await analyzer.run(prompt)
+    try:
+        summarize_conv = await analyzer.run(prompt)
+    except Exception as e:
+        summarize_conv=f"Ошибка при создании краткой выжимки: {e}"
+
     return str(summarize_conv)
 
 # Вынесение юридического вердикта
@@ -125,7 +129,7 @@ async def pass_a_verdict(summarize_conv):
     )
 
     query_engine_agent = AgentWorkflow.from_tools_or_functions(
-        tools_or_functions=[query_engine_tool],
+        tools_or_functions=[query_engine_tool,search_tool],
         llm=llm,
         system_prompt=(
             "Ты — юридический ИИ-агент. У тебя есть доступ к базе правовых документов (Конституция, кодексы и т.д.) "
@@ -136,21 +140,18 @@ async def pass_a_verdict(summarize_conv):
     )
 
     prompt = f"На основании следующего описания ситуации вынеси юридический вердикт:\n\n{summarize_conv}"
-    verdict = await query_engine_agent.run(prompt)
+    try:
+        verdict = await query_engine_agent.run(prompt)
+    except Exception as e:
+        verdict=f"Ошибка при вынесении вердикта: {e}"
+
     return str(verdict)
 
 # Оценка рисков
 async def risk_estimate_and_forecast(summarize_conv, verdict):
-    query_engine = init_query_engine()
-    query_engine_tool = QueryEngineTool(
-        query_engine=query_engine,
-        metadata=ToolMetadata(
-            name="legal_documents_search",
-            description="Поиск и извлечение информации из Конституции, кодексов и других правовых документов Узбекистана."
-        ),
-    )
+
     estimater = AgentWorkflow.from_tools_or_functions(
-        tools_or_functions=[search_tool,query_engine],
+        tools_or_functions=[search_tool],
         llm=llm,
         system_prompt=(
             "Ты — юридический аналитик, специализирующийся на оценке правовых и репутационных рисков. "
@@ -177,6 +178,8 @@ async def risk_estimate_and_forecast(summarize_conv, verdict):
         result = f"Ошибка при оценке рисков и прогнозе: {e}"
 
     return str(result)
+
+
 
 # Главная функция
 async def main():
