@@ -18,6 +18,7 @@ from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.llms.ollama import Ollama
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core import Settings
+from pathlib import Path
 
 # Настройка логгирования
 logging.basicConfig(level=logging.INFO)
@@ -59,10 +60,14 @@ def init_query_engine():
 
     # # Устанавливаем локальную модель эмбеддингов
     # Settings.embed_model = HuggingFaceEmbedding(model_name="sberbank-ai/sbert_large_mt_nlu_ru")
+    MODEL_CACHE_DIR = Path.home() / ".my_models" / "sbert_large_mt_nlu_ru"
+    MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
     Settings.embed_model = HuggingFaceEmbedding(
     model_name="sberbank-ai/sbert_large_mt_nlu_ru",
+    cache_folder=str(MODEL_CACHE_DIR),  # явно указываем путь для кэширования
     device="cpu"
-    )
+)
     
     if os.path.exists(persist_dir):
         logger.info("Загружаем существующий индекс...")
@@ -183,6 +188,39 @@ async def risk_estimate_and_forecast(summarize_conv, verdict):
 
     return str(result)
 
+# Проверка
+async def review_func(verdict, risks):
+    reviewer = AgentWorkflow.from_tools_or_functions(
+        tools_or_functions=[search_tool],
+        llm=llm,
+        system_prompt=(
+            "Ты — юридический рецензент. Проверь корректность юридического вердикта и оценки рисков.\n\n"
+            "- Убедись, что вердикт содержит юридически обоснованные выводы и при необходимости ссылается на нормы законодательства Узбекистана.\n"
+            "- Проверь, насколько логична и обоснованна оценка рисков, есть ли в ней структура, прогноз, степень серьёзности.\n"
+            "- Укажи, есть ли ошибки, недостатки, противоречия или упущения.\n"
+            "- Если всё корректно, напиши обоснованное подтверждение этого.\n\n"
+            "‼️ В конце своего ответа обязательно укажи одну из строк:\n"
+            "[ПРОВЕРКА: ПРОЙДЕНА] — если всё корректно\n"
+            "[ПРОВЕРКА: НЕ ПРОЙДЕНА] — если есть ошибки\n"
+            "Ответ структурируй по пунктам, на русском языке."
+        )
+    )
+
+    prompt = (
+        f"Вот юридический вердикт:\n{verdict}\n\n"
+        f"Вот анализ рисков:\n{risks}\n\n"
+        "Проверь оба документа и напиши развернутую юридическую рецензию."
+    )
+
+    try:
+        review = await reviewer.run(prompt)
+        review_text = str(review).strip()
+        passed = "проверка: пройдена" in review_text.lower()
+    except Exception as e:
+        review_text = f"Ошибка при проверке: {e}"
+        passed = False
+
+    return review_text, passed
 
 
 # Главная функция
@@ -191,15 +229,34 @@ async def main():
     summarize_conv = await analyze(conv=conv)
     print("\nКраткая выжимка:\n", summarize_conv)
 
-    verdict = await pass_a_verdict(summarize_conv=summarize_conv)
-    print("\nЮридический вердикт:\n", verdict)
+    # Повторяем генерацию, пока не пройдёт проверку
+    max_attempts = 5
+    attempt = 0
+    passed = False
 
-    risks = await risk_estimate_and_forecast(summarize_conv=summarize_conv, verdict=verdict)
-    print("\nОценка рисков:\n", risks)
+    while not passed and attempt < max_attempts:
+        attempt += 1
+        print(f"\n--- Попытка #{attempt} ---")
 
-    # Сохраняем результаты в файл (опционально)
+        verdict = await pass_a_verdict(summarize_conv=summarize_conv)
+        print("\nЮридический вердикт:\n", verdict)
+
+        risks = await risk_estimate_and_forecast(summarize_conv=summarize_conv, verdict=verdict)
+        print("\nОценка рисков:\n", risks)
+
+        review, passed = await review_func(verdict=verdict, risks=risks)
+        print("\nПроверка вердикта и рисков:\n", review)
+
+    if passed:
+        print("\n✅ Проверка пройдена. Итоговые документы:")
+        print("\nЮридический вердикт:\n", verdict)
+        print("\nОценка рисков:\n", risks)
+    else:
+        print("\n❌ Не удалось пройти проверку.")
+
+
+    # Сохраняем результаты в файл а имеенно вердикт и оценку рисков
     with open("results.txt", "w", encoding="utf-8") as f:
-        f.write(f"Краткая выжимка:\n{summarize_conv}\n\n")
         f.write(f"Юридический вердикт:\n{verdict}\n\n")
         f.write(f"Оценка рисков:\n{risks}\n")
 
