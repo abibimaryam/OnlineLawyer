@@ -4,7 +4,9 @@ from telegram_bot.keyboards import get_main_keyboard
 
 
 class HelpHandler:
-    async def show_help(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def show_help(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
         help_text = """
 <b>Команды бота</b>
 
@@ -16,11 +18,10 @@ class HelpHandler:
 <b>/cancel</b> - Прервать текущее действие
 
 <b>/request [запрос]</b> - Запрос агента
+<b>/restart_session</b> - Перезапустить
         """
         await update.message.reply_text(
-            help_text,
-            parse_mode='HTML',
-            reply_markup=get_main_keyboard()
+            help_text, parse_mode="HTML", reply_markup=get_main_keyboard()
         )
 
     def get_handler(self) -> list:

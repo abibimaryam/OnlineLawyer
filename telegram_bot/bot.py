@@ -21,6 +21,8 @@ def run_bot():
     from telegram_bot.help import HelpHandler
     from telegram_bot.auth.handlers import AuthHandlers
     from telegram_bot.requests.handlers import RequestHandlers
+    from telegram_bot.session.handlers import SessionHandler
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     from django.conf import settings
@@ -29,6 +31,7 @@ def run_bot():
         *HelpHandler().get_handler(),
         *AuthHandlers().get_handlers(),
         *RequestHandlers().get_handlers(),
+        *SessionHandler().get_handlers(),
     ]
     for handler in handlers: application.add_handler(handler)
     logger.info("The bot has been launched...")
