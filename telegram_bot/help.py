@@ -18,6 +18,7 @@ class HelpHandler:
 <b>/cancel</b> - Прервать текущее действие
 
 <b>/request [запрос]</b> - Запрос агента
+<b>/ask_lawyer [вопрос]</b> - Задать вопрос юристу
 <b>/restart_session</b> - Перезапустить
         """
         await update.message.reply_text(

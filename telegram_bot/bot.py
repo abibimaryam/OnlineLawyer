@@ -2,6 +2,7 @@ import os
 import asyncio
 import logging
 from telegram.ext import Application
+from telegram_bot.law_handlers import LawHandlers
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -31,6 +32,7 @@ def run_bot():
         *HelpHandler().get_handler(),
         *AuthHandlers().get_handlers(),
         *RequestHandlers().get_handlers(),
+        *LawHandlers().get_handlers(),
         *SessionHandler().get_handlers(),
     ]
     for handler in handlers: application.add_handler(handler)

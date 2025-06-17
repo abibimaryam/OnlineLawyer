@@ -2,7 +2,7 @@ import asyncio
 import logging
 import aiosqlite
 import datetime
-from config import TOKEN 
+#from config import TOKEN 
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 from aiogram.enums.dice_emoji import DiceEmoji
@@ -47,7 +47,7 @@ class AnsweringStates(StatesGroup):
 # Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
 # Объект бота
-bot = Bot(token=TOKEN)
+bot = Bot(token="8004645050:AAGQTQAOPs-1iUFHTpgiih_AHzGNQNTsO6U")
 # Диспетчер
 dp = Dispatcher(storage=MemoryStorage())
 
@@ -349,7 +349,7 @@ async def take_question(message: types.Message, state: FSMContext): # Добав
         # Найдём первый ожидающий вопрос
         cursor = await db.execute("""
             SELECT id, user_id, question_text FROM questions 
-            WHERE status = 'ожидает' 
+            WHERE status IN ('новый','ожидает') 
             ORDER BY created_at 
             LIMIT 1
         """)
@@ -379,6 +379,8 @@ async def take_question(message: types.Message, state: FSMContext): # Добав
         await message.answer(f"Вам назначен вопрос #{question_id} от пользователя.\n\n"
                              f"❓ **Текст вопроса:**\n{question_text}\n\n"
                              f"Пожалуйста, напишите ваш ответ следующим сообщением.", parse_mode=ParseMode.MARKDOWN)
+        await state.update_data(question_id=question_id, user_id=user_id)
+        await state.set_state(AnsweringStates.waiting_for_answer)
 
 @dp.message(AnsweringStates.waiting_for_answer)
 async def process_answer(message: types.Message, state: FSMContext):
