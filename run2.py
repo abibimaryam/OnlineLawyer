@@ -16,6 +16,11 @@ from aiogram.filters.state import StateFilter
 # from aiogram.types import ReplyKeyboardRemove
 from aiogram.types import BotCommandScopeChat
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 class UserRegistrationStates(StatesGroup):
     first_name = State()
     second_name = State()
@@ -47,7 +52,7 @@ class AnsweringStates(StatesGroup):
 # Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
 # Объект бота
-bot = Bot(token="8004645050:AAGwNafAN_8bIzKyNTrczNj6fspyqog1QyM")
+bot = Bot(token= os.getenv('LAWYER_BOT_TOKEN'))
 # Диспетчер
 dp = Dispatcher(storage=MemoryStorage())
 

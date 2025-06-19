@@ -4,7 +4,14 @@ import asyncio
 import aiosqlite
 from telegram import Bot
 
-BOT1_TOKEN = "7854551801:AAHG1dt8IgpapOkWnhduElIzotBMXM9C97A" # main bot's token
+
+import os
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+BOT1_TOKEN = os.getenv('USER_BOT_TOKEN')
 
 async def send_pending_answers():
     bot = Bot(BOT1_TOKEN)
