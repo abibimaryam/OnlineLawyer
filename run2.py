@@ -47,7 +47,7 @@ class AnsweringStates(StatesGroup):
 # Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
 # Объект бота
-bot = Bot(token="8004645050:AAGQTQAOPs-1iUFHTpgiih_AHzGNQNTsO6U")
+bot = Bot(token="8004645050:AAGwNafAN_8bIzKyNTrczNj6fspyqog1QyM")
 # Диспетчер
 dp = Dispatcher(storage=MemoryStorage())
 
