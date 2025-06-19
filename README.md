@@ -61,7 +61,7 @@ git clone https://github.com/abibimaryam/OnlineLawyer
 
 
 # Запуск бота
-python bot.py
+python main.py
 
 
 
