@@ -38,7 +38,7 @@ class LawyerRegistrationStates(StatesGroup):
 
 user_lawyer =  InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text='Пользователь', callback_data='user_register'), InlineKeyboardButton(text='Юрист', callback_data='lawyer_register')]
+        [InlineKeyboardButton(text='Юрист', callback_data='lawyer_register')]
     ]
 )
 
@@ -92,48 +92,25 @@ async def set_personal_commands(bot: Bot, user_id: int):
 @dp.message(Command("start"))
 async def start(message: types.Message, bot: Bot):
     await message.answer(
-    "Здравствуйте!\n"
-    "Это бот <b><i>Юридическая помощь</i></b>. Задайте свой вопрос — мы поможем или передадим его юристу.",
-    parse_mode=ParseMode.HTML
-)
+        "👋 Здравствуйте!\n\n"
+        "Это бот юридической поддержки, предназначенный <b>только для юристов</b>.\n\n"
+        "Чтобы зарегистрироваться, введите команду /registr\n",
+        parse_mode=ParseMode.HTML
+    )
     await set_personal_commands(bot, message.from_user.id)
 
-@dp.message(Command('help'))
+@dp.message(Command("help"))
 async def help_message(message: types.Message):
-    async with aiosqlite.connect("telegram_data_base.db") as db:
-        user = await db.execute("SELECT id FROM users WHERE id = ?", (message.user_id,))
-        is_user = await user.fetchone()
-        lawyer = await db.execute("SELECT id FROM lawyers WHERE id = ?", (message.user_id,))
-        is_lawyer = await lawyer.fetchone()
+    text = (
+        "📌 <b>Команды для юриста:</b>\n\n"
+        "/start — запуск бота\n"
+        "/takequestion — получить новый вопрос от пользователя\n"
+        "/lawinfo — статьи о правах человека\n"
+        "/help — показать это меню помощи\n\n"
+        "Если у вас возникли проблемы с использованием бота, просто напишите ваш вопрос — мы поможем!"
+    )
+    await message.answer(text, parse_mode=ParseMode.HTML)
 
-    if is_user:
-        text = """"📌 Команды для пользователя:\n\n"
-                    "/start — запуск бота\n"
-                    "/ask — задать юридический вопрос\n"
-                    "/lawinfo — статьи о правах человека\n"
-                    "/help — показать это меню помощи\n\n"
-                    Если у вас возникли проблемы с использованием бота, просто напишите ваш вопрос — мы поможем!
-                    """
-        await message.answer(text)
-    elif is_lawyer:
-        text = """""📌 Команды для юриста:\n\n"
-                    "/start — запуск бота\n"
-                    "/takequestion — получить новый вопрос от пользователя\n"
-                    "/lawinfo — статьи о правах человека\n"
-                    "/help — показать это меню помощи\n\n"
-                    Если у вас возникли проблемы с использованием бота, просто напишите ваш вопрос — мы поможем!
-                    """
-        await message.answer(text)
-    else:
-        text = """"📌 Команды:\n\n"
-                    "/start — запуск бота\n"
-                    "/registr — регистрация пользователя или юриста\n"
-                    "/lawinfo — статьи о правах человека\n"
-                    "/help — показать это меню помощи\n"
-                    "/whyinfo — зачем нужны ваши данные"\n\n
-                    Если у вас возникли проблемы с использованием бота, просто напишите ваш вопрос — мы поможем!
-                    """
-        await message.answer(text)
 
 # =========================  ПОЛЬЗОВАТЕЛЬ  =========================== #
 @dp.message(UserRegistrationStates.second_name)
@@ -258,7 +235,7 @@ async def lawyer_email(message: types.Message, state: FSMContext):
             ))
             await db.commit()
 
-    await message.answer("Регистрация юриста завершена успешно. Ваши данные будут защищены, не волнуйтесь!\n\nОтправьте команду \start и расширьте возможности!")
+    await message.answer("Регистрация юриста завершена успешно. Чтобы узнать, как пользоваться ботом, введите команду /help.")
     await state.clear()
 
 @dp.callback_query(F.data == 'lawyer_register')
