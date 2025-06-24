@@ -1,4 +1,3 @@
-# telegram_bot/law_handlers.py
 import aiosqlite
 from telegram import Update
 from telegram.ext import (

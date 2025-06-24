@@ -46,13 +46,13 @@ async def send_pending_answers():
         await asyncio.sleep(5)
 
 async def main():
-    # Запуск Django
+   
     subprocess.Popen([sys.executable, 'manage.py', 'runserver'])
 
-    # Импорт async run_bot
+    
     from telegram_bot.bot import run_bot
 
-    # Параллельный запуск бота и задачи
+   
     await asyncio.gather(
         send_pending_answers(),
         run_bot()
