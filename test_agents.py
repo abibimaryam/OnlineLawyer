@@ -44,3 +44,22 @@ async def test_risk_estimate_and_forecast(mock_agent_workflow):
 
     assert any(keyword in result.lower() for keyword in ["риски", "прогноз", "оценка"]), \
         f"Результат не содержит ожидаемых ключевых слов: {result}"
+
+@patch('agents.AgentWorkflow')
+async def test_review_func_passed(mock_agent_workflow):
+    mock_instance = AsyncMock()
+    mock_instance.run.return_value = "[ПРОВЕРКА: ПРОЙДЕНА]\nЮридическая рецензия: всё корректно."
+    mock_agent_workflow.from_tools_or_functions.return_value = mock_instance
+
+    result, passed = await agents.review_func("вердикт", "риски")
+
+    assert passed is True
+    assert "пройдена" in result.lower()
+
+async def test_conversation():
+    user_input = "У меня проблема с жильём"
+    result = await agents.conversation(user_input)
+
+    assert isinstance(result, list)
+    assert result[0]["role"] == "assistant"
+    assert result[1]["content"] == user_input
