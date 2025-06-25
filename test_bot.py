@@ -14,3 +14,5 @@ async def test_set_personal_commands_for_user(mock_connect):
 
     bot = AsyncMock()
     await set_personal_commands(bot, user_id)
+
+    bot.set_my_commands.assert_called()
