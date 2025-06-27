@@ -77,3 +77,11 @@ pip install -r requirements.txt
 python main.py бот для пользователя
 
 python run2.py бот для юристов
+
+## Запуск тестов
+
+Для запуска всех тестов выполните:
+
+```bash
+PYTHONPATH=. pytest
+```

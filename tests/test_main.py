@@ -1,3 +1,4 @@
+import asyncio
 import pytest
 from unittest.mock import AsyncMock, patch
 from main import send_pending_answers
@@ -20,4 +21,3 @@ async def test_send_pending_answers_sends_message(mock_connect, mock_bot_class):
     task.cancel()
 
     mock_bot.send_message.assert_called_once()
-    

@@ -1,5 +1,5 @@
 import pytest
-from telegram_bot.bot import set_personal_commands
+from run2 import set_personal_commands
 from unittest.mock import AsyncMock, patch
 
 @pytest.mark.asyncio
